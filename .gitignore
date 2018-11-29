@@ -1,0 +1,9 @@
+Library/
+Temp/
+*.csproj
+*.sln
+Android/
+Windows/
+Linux/
+Ios/
+MacOs/
