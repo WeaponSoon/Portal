@@ -76,14 +76,21 @@ public class Portal : MonoBehaviour {
         
     }
 
+    
+
     public bool ShouldCameraRender(Camera cam)
     {
         var planes = GeometryUtility.CalculateFrustumPlanes(cam);
         
-
+        //Debug.DrawLine(p, fc[0], Color.red,0);
+        //Debug.DrawLine(p, fc[1], Color.green, 0);
+        //Debug.DrawLine(p, fc[2], Color.blue, 0);
+        //Debug.DrawLine(p, fc[3], Color.cyan, 0);
+        
+        
         return motherPair != null && motherPair.portalA != null && motherPair.portalB != null && 
            GeometryUtility.TestPlanesAABB(planes, portalBounds) &&
-           Vector3.Dot(cam.transform.forward, portalForward) < 0;
+           Vector3.Dot(portalPlaneRenderer.transform.position - cam.transform.position, portalForward) < 0;
     }
 
 	public virtual void OnConnected(PortalPair pair)

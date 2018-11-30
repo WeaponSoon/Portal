@@ -9,7 +9,7 @@ public class PortalViewTree {
 
     private int currentLayer = 0;
     public Camera rootCamera;
-    private PortalNode rootNode = new PortalNode(null);
+    private PortalNode rootNode = PortalNode.QueryNode(null);
 
     public static Vector3 ZeroV3 = new Vector3(0.0f, 0.0f, 0.0f);
     public static Vector3 OneV3 = new Vector3(1.0f, 1.0f, 1.0f);
@@ -20,7 +20,7 @@ public class PortalViewTree {
     public void BuildPortalViewTree()
     {
         currentLayer = 0;
-        rootNode.nextPairs.Clear();
+        rootNode.Recycle();
         BuildPortalViewTree(rootNode);
     }
     private void BuildPortalViewTree(PortalNode p)
@@ -28,18 +28,18 @@ public class PortalViewTree {
         if (currentLayer >= maxLayer)
             return;
         currentLayer++;
-        Debug.Log("Current Deep: " + currentLayer);
+        
         Camera currentCam = p.thisPortal == null ? rootCamera : p.thisPortal.portalCamera;
         foreach (var pair in PortalPair.portalPairs)
         {
             if(pair.portalA != null && pair.portalA.ShouldCameraRender(currentCam))
             {
-                p.nextPairs.Add(new PortalNode(pair.portalA));
+                p.nextPairs.Add(PortalNode.QueryNode(pair.portalA));
             }
 
             if (pair.portalB != null && pair.portalB.ShouldCameraRender(currentCam))
             {
-                p.nextPairs.Add(new PortalNode(pair.portalB));
+                p.nextPairs.Add(PortalNode.QueryNode(pair.portalB));
             }
         }
         foreach (var node in p.nextPairs)
@@ -103,19 +103,47 @@ public class PortalViewTree {
 
 public class PortalNode
 {
-    private static Queue<PortalNode> pool;
+    private const int MAX_POOL_COUNT = 50;
+    private static Queue<PortalNode> pool = new Queue<PortalNode>();
     public static PortalNode QueryNode(Portal v)
     {
-        return null;
+        if(pool.Count > 0)
+        {
+            var ret = pool.Dequeue();
+            ret.thisPortal = v;
+            ret.rotation = Quaternion.identity;
+            ret.position = Vector3.zero;
+            ret.projMat = Matrix4x4.identity;
+            ret.inQueue = false;
+            
+            return ret;
+        }
+        return new PortalNode(v);
     }
-
+    public bool inQueue = false;
     public Vector3 position;
     public Quaternion rotation = Quaternion.identity;
     public Portal thisPortal;
     public Matrix4x4 projMat;
     public List<PortalNode> nextPairs = new List<PortalNode>();
-    public PortalNode(Portal v)
+    private PortalNode(Portal v)
     {
         this.thisPortal = v;
+    }
+    public void Recycle()
+    {
+        foreach (var node in nextPairs)
+        {
+            node.Recycle();
+            node.nextPairs.Clear();
+            node.thisPortal = null;
+            
+            if(pool.Count < MAX_POOL_COUNT && !node.inQueue)
+            {
+                node.inQueue = true;
+                pool.Enqueue(node);
+            }
+        }
+        nextPairs.Clear();
     }
 }

@@ -12,7 +12,7 @@ public class ChaC : MonoBehaviour {
 	}
 	
 	// Update is called once per frame
-	void Update () {
+	void FixedUpdate () {
 
 #if UNITY_STANDALONE_WIN || UNITY_EDITOR
         float forward = Input.GetAxis("Vertical");
