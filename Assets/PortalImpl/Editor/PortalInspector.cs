@@ -18,7 +18,7 @@ public class PortalInspector : Editor {
         EditorGUILayout.BeginVertical();
         if (EditorGUILayout.DropdownButton(new GUIContent("测试按钮"), FocusType.Passive))
         {
-            portal.ShouldCameraRender(Camera.main);
+            //portal.ShouldCameraRender(Camera.main);
         }
         EditorGUILayout.EndVertical();
     }

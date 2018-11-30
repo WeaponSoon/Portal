@@ -30,14 +30,17 @@ public class PortalViewTree {
         currentLayer++;
         
         Camera currentCam = p.thisPortal == null ? rootCamera : p.thisPortal.portalCamera;
+        ScreenPoatalArea portalRect = p.thisPortal == null ? 
+            new ScreenPoatalArea() { scrrenRect = new Rect(0, 0, Screen.width, Screen.height),minDeep = currentCam.nearClipPlane, maxDeep = currentCam.nearClipPlane } 
+            : p.thisPortal.otherPortal.GetPortalRect(currentCam);
         foreach (var pair in PortalPair.portalPairs)
         {
-            if(pair.portalA != null && pair.portalA.ShouldCameraRender(currentCam))
+            if(pair.portalA != null && pair.portalA.ShouldCameraRender(currentCam,portalRect))
             {
                 p.nextPairs.Add(PortalNode.QueryNode(pair.portalA));
             }
 
-            if (pair.portalB != null && pair.portalB.ShouldCameraRender(currentCam))
+            if (pair.portalB != null && pair.portalB.ShouldCameraRender(currentCam, portalRect))
             {
                 p.nextPairs.Add(PortalNode.QueryNode(pair.portalB));
             }
