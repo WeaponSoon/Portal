@@ -7,7 +7,7 @@ public class PortalViewTree {
 
     public int maxLayer = 1;
 
-    private int currentLayer = 0;
+    //private int currentLayer = 0;
     public Camera rootCamera;
     private PortalNode rootNode = PortalNode.QueryNode(null);
 
@@ -19,28 +19,35 @@ public class PortalViewTree {
 
     public void BuildPortalViewTree()
     {
-        currentLayer = 0;
+        //currentLayer = 0;
         rootNode.Recycle();
-        BuildPortalViewTree(rootNode);
+        BuildPortalViewTree(rootNode, 0);
     }
-    private void BuildPortalViewTree(PortalNode p)
+    private void BuildPortalViewTree(PortalNode p, int lastDepth)
     {
-        if (currentLayer >= maxLayer)
+        if (lastDepth >= maxLayer)
             return;
-        currentLayer++;
-        
+
+        lastDepth++;
         Camera currentCam = p.thisPortal == null ? rootCamera : p.thisPortal.portalCamera;
+        if(p.thisPortal != null)
+        {
+            currentCam.transform.position = p.position;
+            currentCam.transform.rotation = p.rotation;
+            currentCam.projectionMatrix = p.projMat;
+        }
+        Debug.DrawLine(currentCam.transform.position, currentCam.transform.position + currentCam.transform.forward);
         ScreenPoatalArea portalRect = p.thisPortal == null ? 
             new ScreenPoatalArea() { scrrenRect = new Rect(0, 0, Screen.width, Screen.height),minDeep = currentCam.nearClipPlane, maxDeep = currentCam.nearClipPlane } 
             : p.thisPortal.otherPortal.GetPortalRect(currentCam);
         foreach (var pair in PortalPair.portalPairs)
         {
-            if(pair.portalA != null && pair.portalA.ShouldCameraRender(currentCam,portalRect))
+            if(pair.portalA != null  && pair.portalA.ShouldCameraRender(currentCam,portalRect))
             {
                 p.nextPairs.Add(PortalNode.QueryNode(pair.portalA));
             }
 
-            if (pair.portalB != null && pair.portalB.ShouldCameraRender(currentCam, portalRect))
+            if (pair.portalB != null  && pair.portalB.ShouldCameraRender(currentCam, portalRect))
             {
                 p.nextPairs.Add(PortalNode.QueryNode(pair.portalB));
             }
@@ -64,8 +71,8 @@ public class PortalViewTree {
             portalCamera.transform.position = Destination.TransformPoint(cameraPositionInSourceSpace);
             portalCamera.transform.rotation = Destination.rotation * cameraRotationInSourceSpace;
 
-            node.position = portalCamera.transform.position;
-            node.rotation = portalCamera.transform.rotation;
+            node.position = Destination.TransformPoint(cameraPositionInSourceSpace);
+            node.rotation = Destination.rotation * cameraRotationInSourceSpace;
 
             // Calculate clip plane for portal (for culling of objects inbetween destination camera and portal)
             Vector4 clipPlaneWorldSpace = new Vector4(node.thisPortal.otherPortal.portalForward.x, node.thisPortal.otherPortal.portalForward.y,
@@ -74,14 +81,15 @@ public class PortalViewTree {
 
             // Update projection based on new clip plane
             // Note: http://aras-p.info/texts/obliqueortho.html and http://www.terathon.com/lengyel/Lengyel-Oblique.pdf
-            portalCamera.projectionMatrix = rootCamera.CalculateObliqueMatrix(clipPlaneCameraSpace);
-            node.projMat = portalCamera.projectionMatrix;
-            BuildPortalViewTree(node);
+            //portalCamera.projectionMatrix = rootCamera.CalculateObliqueMatrix(clipPlaneCameraSpace);
+            node.projMat = portalCamera.CalculateObliqueMatrix(clipPlaneCameraSpace);
+            BuildPortalViewTree(node, lastDepth);
         }
     }
 
     public void RenderPortalViewTree()
     {
+        
         RenderPortalViewTree(rootNode);
     }
     private void RenderPortalViewTree(PortalNode p)

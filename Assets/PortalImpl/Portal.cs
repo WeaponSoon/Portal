@@ -145,7 +145,7 @@ public class Portal : MonoBehaviour {
         
         return motherPair != null && motherPair.portalA != null && motherPair.portalB != null && 
            GeometryUtility.TestPlanesAABB(planes, portalBounds) &&
-           xMin < xMax && yMin < yMax && //mySpa.maxDeep > spa.minDeep &&
+           xMin < xMax && yMin < yMax && mySpa.maxDeep > spa.minDeep &&
            Vector3.Dot(portalPlaneRenderer.transform.position - cam.transform.position, portalForward) < 0;
     }
 
