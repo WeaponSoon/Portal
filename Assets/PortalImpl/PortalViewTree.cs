@@ -9,7 +9,7 @@ public class PortalViewTree {
 
     //private int currentLayer = 0;
     public Camera rootCamera;
-    private PortalNode rootNode = PortalNode.QueryNode(null);
+    private PortalNode rootNode;// 
 
     public static Vector3 ZeroV3 = new Vector3(0.0f, 0.0f, 0.0f);
     public static Vector3 OneV3 = new Vector3(1.0f, 1.0f, 1.0f);
@@ -19,6 +19,10 @@ public class PortalViewTree {
 
     public void BuildPortalViewTree()
     {
+        if(rootNode == null)
+        {
+            rootNode = PortalNode.QueryNode(null, -1);
+        }
         //currentLayer = 0;
         rootNode.Recycle();
         BuildPortalViewTree(rootNode, 0);
@@ -30,11 +34,13 @@ public class PortalViewTree {
 
         lastDepth++;
         Camera currentCam = p.thisPortal == null ? rootCamera : p.thisPortal.portalCamera;
-        if(p.thisPortal != null)
+        
+        if (p.thisPortal != null)
         {
             currentCam.transform.position = p.position;
             currentCam.transform.rotation = p.rotation;
             currentCam.projectionMatrix = p.projMat;
+            currentCam.targetTexture = p.rt;
         }
         Debug.DrawLine(currentCam.transform.position, currentCam.transform.position + currentCam.transform.forward);
         ScreenPoatalArea portalRect = p.thisPortal == null ? 
@@ -44,12 +50,12 @@ public class PortalViewTree {
         {
             if(pair.portalA != null  && pair.portalA.ShouldCameraRender(currentCam,portalRect))
             {
-                p.nextPairs.Add(PortalNode.QueryNode(pair.portalA));
+                p.nextPairs.Add(PortalNode.QueryNode(pair.portalA, lastDepth-1));
             }
 
             if (pair.portalB != null  && pair.portalB.ShouldCameraRender(currentCam, portalRect))
             {
-                p.nextPairs.Add(PortalNode.QueryNode(pair.portalB));
+                p.nextPairs.Add(PortalNode.QueryNode(pair.portalB, lastDepth - 1));
             }
         }
         foreach (var node in p.nextPairs)
@@ -103,11 +109,20 @@ public class PortalViewTree {
             p.thisPortal.portalCamera.transform.position = p.position;
             p.thisPortal.portalCamera.transform.rotation = p.rotation;
             p.thisPortal.portalCamera.projectionMatrix = p.projMat;
+            p.thisPortal.portalCameraTarget = p.rt;
+            foreach (var node in p.nextPairs)
+            {
+                node.thisPortal.portalTexture = node.rt;
+            }
             p.thisPortal.portalCamera.Render();
         }
         else
         {
-            //rootCamera.Render();
+            foreach (var node in p.nextPairs)
+            {
+                node.thisPortal.portalTexture = node.rt;
+            }
+            rootCamera.Render();
         }
     }
 }
@@ -115,9 +130,24 @@ public class PortalViewTree {
 public class PortalNode
 {
     private const int MAX_POOL_COUNT = 50;
-    private static Queue<PortalNode> pool = new Queue<PortalNode>();
-    public static PortalNode QueryNode(Portal v)
+    private static Queue<PortalNode> highResPool = new Queue<PortalNode>();
+    private static Queue<PortalNode> middleResPool = new Queue<PortalNode>();
+    private static Queue<PortalNode> lowResPool = new Queue<PortalNode>();
+    private static readonly Vector2[] RES_LAYER = new Vector2[] {
+        new Vector2(Screen.width, Screen.height),
+        new Vector2(Screen.width/1.414f, Screen.height/1.414f),
+        new Vector2(Screen.width/2, Screen.height/2)
+    };
+    public static PortalNode QueryNode(Portal v, int layer)
     {
+        Queue<PortalNode> pool;
+        if (layer <= 0)
+            pool = highResPool;
+        else if (layer == 1)
+            pool = middleResPool;
+        else
+            pool = lowResPool;
+        
         if(pool.Count > 0)
         {
             var ret = pool.Dequeue();
@@ -129,16 +159,24 @@ public class PortalNode
             
             return ret;
         }
-        return new PortalNode(v);
+        layer = Mathf.Clamp(layer, 0, 2);
+        var res = RES_LAYER[layer];
+        var temp = new PortalNode(v, pool);
+        temp.rt = new RenderTexture((int)res.x, (int)res.y, 24);
+        return temp;
     }
+    public Queue<PortalNode> belonePool;
+    public RenderTexture rt;
     public bool inQueue = false;
     public Vector3 position;
     public Quaternion rotation = Quaternion.identity;
     public Portal thisPortal;
     public Matrix4x4 projMat;
     public List<PortalNode> nextPairs = new List<PortalNode>();
-    private PortalNode(Portal v)
+    private PortalNode(Portal v, Queue<PortalNode> pool)
     {
+        belonePool = pool;
+        
         this.thisPortal = v;
     }
     public void Recycle()
@@ -149,10 +187,10 @@ public class PortalNode
             node.nextPairs.Clear();
             node.thisPortal = null;
             
-            if(pool.Count < MAX_POOL_COUNT && !node.inQueue)
+            if(node.belonePool.Count < MAX_POOL_COUNT && !node.inQueue)
             {
                 node.inQueue = true;
-                pool.Enqueue(node);
+                node.belonePool.Enqueue(node);
             }
         }
         nextPairs.Clear();

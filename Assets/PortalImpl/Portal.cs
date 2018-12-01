@@ -53,7 +53,28 @@ public class Portal : MonoBehaviour {
             return motherPair.portalA == this ? motherPair.portalB : motherPair.portalA;
         }
     }
-
+    public Texture portalTexture
+    {
+        get
+        {
+            return portalPlaneRenderer.material.GetTexture("_MainTex");
+        }
+        set
+        {
+            portalPlaneRenderer.material.SetTexture("_MainTex", value);
+        }
+    }
+    public RenderTexture portalCameraTarget
+    {
+        get
+        {
+            return portalCamera.targetTexture;
+        }
+        set
+        {
+            portalCamera.targetTexture = value;
+        }
+    }
     public Bounds portalBounds
     {
         get
@@ -167,11 +188,11 @@ public class Portal : MonoBehaviour {
         }
         rt = new RenderTexture(Screen.width, Screen.height, 24);
         portalCamera = new GameObject("PortalCamera",typeof(Camera)).GetComponent<Camera>();
-        portalCamera.targetTexture = rt;
+        
         portalCamera.enabled = false;
         portalCamera.transform.parent = portalPlaneRenderer.transform;
         portalPlaneRenderer.material = new Material(portalPlaneShader);
-        portalPlaneRenderer.material.SetTexture("_MainTex",rt);
+        
     }
     private void OnDestroy()
     {
