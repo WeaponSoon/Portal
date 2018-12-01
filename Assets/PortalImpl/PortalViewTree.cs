@@ -33,6 +33,7 @@ public class PortalViewTree {
             return;
 
         lastDepth++;
+        
         Camera currentCam = p.thisPortal == null ? rootCamera : p.thisPortal.portalCamera;
         
         if (p.thisPortal != null)
@@ -42,7 +43,7 @@ public class PortalViewTree {
             currentCam.projectionMatrix = p.projMat;
             currentCam.targetTexture = p.rt;
         }
-        Debug.DrawLine(currentCam.transform.position, currentCam.transform.position + currentCam.transform.forward);
+        
         ScreenPoatalArea portalRect = p.thisPortal == null ? 
             new ScreenPoatalArea() { scrrenRect = new Rect(0, 0, Screen.width, Screen.height),minDeep = currentCam.nearClipPlane, maxDeep = currentCam.nearClipPlane } 
             : p.thisPortal.otherPortal.GetPortalRect(currentCam);
@@ -58,8 +59,16 @@ public class PortalViewTree {
                 p.nextPairs.Add(PortalNode.QueryNode(pair.portalB, lastDepth - 1));
             }
         }
+        
         foreach (var node in p.nextPairs)
         {
+            if (p.thisPortal != null)
+            {
+                currentCam.transform.position = p.position;
+                currentCam.transform.rotation = p.rotation;
+                currentCam.projectionMatrix = p.projMat;
+                currentCam.targetTexture = p.rt;
+            }
             Transform Source = node.thisPortal.portalPlaneTransform;
             Transform Destination = node.thisPortal.otherPortal.portalPlaneTransform;
             Camera portalCamera = node.thisPortal.portalCamera;
@@ -88,7 +97,7 @@ public class PortalViewTree {
             // Update projection based on new clip plane
             // Note: http://aras-p.info/texts/obliqueortho.html and http://www.terathon.com/lengyel/Lengyel-Oblique.pdf
             //portalCamera.projectionMatrix = rootCamera.CalculateObliqueMatrix(clipPlaneCameraSpace);
-            node.projMat = portalCamera.CalculateObliqueMatrix(clipPlaneCameraSpace);
+            node.projMat = rootCamera.CalculateObliqueMatrix(clipPlaneCameraSpace);
             BuildPortalViewTree(node, lastDepth);
         }
     }
@@ -159,6 +168,7 @@ public class PortalNode
             
             return ret;
         }
+        Debug.Log("New Node Instance!");
         layer = Mathf.Clamp(layer, 0, 2);
         var res = RES_LAYER[layer];
         var temp = new PortalNode(v, pool);

@@ -149,6 +149,7 @@ public class Portal : MonoBehaviour {
                 minDeep = vets[i].z < minDeep ? vets[i].z : minDeep;
                 maxDeep = vets[i].z > maxDeep ? vets[i].z : maxDeep;
             }
+            
             return new ScreenPoatalArea() { scrrenRect = rect, maxDeep = maxDeep, minDeep = minDeep };
         }
         return new ScreenPoatalArea() { scrrenRect=new Rect(0,0,1,1),minDeep = 0,maxDeep=0};
