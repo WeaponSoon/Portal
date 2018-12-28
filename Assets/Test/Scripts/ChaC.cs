@@ -24,6 +24,7 @@ public class ChaC : MonoBehaviour {
         Rot(yaw, pitch);
 #endif
         GetComponent<CharacterController>().Move(-Vector3.up * 9.8f);
+        
         //Vector3 moveDir = forward * transform.forward + right * transform.right;
         //GetComponent<CharacterController>().Move(moveDir * Time.deltaTime * 5);
         //gameObject.transform.Rotate(Vector3.up, yaw * Time.deltaTime * yawRatio,Space.World);

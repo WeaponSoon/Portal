@@ -4,14 +4,28 @@ using System.Diagnostics;
 using UnityEngine;
 
 [RequireComponent(typeof(Camera))]
-public class PortalMainCamera : MonoBehaviour {
+public class PortalMainCamera : Thoughable {
     [SerializeField]
     private PortalViewTree viewTree = new PortalViewTree();
     private TimeDebugger tdb = new TimeDebugger();
     private TimeDebugger tdr = new TimeDebugger();
+    private SphereCollider sphereCollider;
     private void Awake()
     {
-        viewTree.rootCamera = GetComponent<Camera>();   
+        viewTree.rootCamera = GetComponent<Camera>();
+        sphereCollider = GetComponent<SphereCollider>();
+        if(sphereCollider == null)
+        {
+            sphereCollider = gameObject.AddComponent<SphereCollider>();
+        }
+        sphereCollider.center = Vector3.zero;
+        var nearClip = GetComponent<Camera>().nearClipPlane;
+        var vertAngle = GetComponent<Camera>().fieldOfView / 2;
+        var heght = nearClip * Mathf.Tan(vertAngle/180 * Mathf.PI);
+        var width = heght * GetComponent<Camera>().aspect * heght;
+        var radius = new Vector3(heght, width, nearClip).magnitude;
+        sphereCollider.radius = radius;
+        
     }
     // Use this for initialization
     void Start () {
@@ -19,11 +33,15 @@ public class PortalMainCamera : MonoBehaviour {
 	}
 	
 	// Update is called once per frame
-	void Update () {
+	protected override void Update () {
+        base.Update();
         viewTree.BuildPortalViewTree();
         viewTree.RenderPortalViewTree();
     }
-    
+    private void OnRenderImage(RenderTexture source, RenderTexture destination)
+    {
+        Graphics.Blit(source, destination);
+    }
 }
 
 public class TimeDebugger

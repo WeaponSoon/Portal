@@ -13,6 +13,8 @@ public class Portal : MonoBehaviour {
 
     public Shader portalPlaneShader;
 
+    private List<Thoughable> inRangeThoughable = new List<Thoughable>();
+
     [HideInInspector]
     public Camera portalCamera
     {
@@ -20,7 +22,21 @@ public class Portal : MonoBehaviour {
     }
     [SerializeField]
     private MeshRenderer portalPlaneRenderer;
-    
+
+    private Vector3[] _vertecis = new Vector3[4];
+    public Vector3[] vertecis
+    {
+        get
+        {
+            return _vertecis;
+        }
+    }
+
+    public float SizeX = 2;
+    public float SizeY = 3;
+    public float ThoughableRangeZLength = 6;
+    public float doorZLength = 0.05f;
+
     public Transform portalPlaneTransform
     {
         get
@@ -75,6 +91,8 @@ public class Portal : MonoBehaviour {
             portalCamera.targetTexture = value;
         }
     }
+
+    private BoxCollider thoughableRange;
     public Bounds portalBounds
     {
         get
@@ -110,27 +128,27 @@ public class Portal : MonoBehaviour {
         if (mesh != null && mesh.mesh != null)
         {
             Bounds temBounds = mesh.mesh.bounds;
-            Vector3[] vets = new Vector3[8];
-            vets[0] = temBounds.center + 
-                new Vector3(temBounds.extents.x, temBounds.extents.y, temBounds.extents.z);
-            vets[1] = temBounds.center +
-                new Vector3(temBounds.extents.x, temBounds.extents.y, -temBounds.extents.z);
-            vets[2] = temBounds.center +
-                new Vector3(temBounds.extents.x, -temBounds.extents.y, -temBounds.extents.z);
-            vets[3] = temBounds.center +
-                new Vector3(temBounds.extents.x, -temBounds.extents.y, temBounds.extents.z);
-            vets[4] = temBounds.center +
-                new Vector3(-temBounds.extents.x, temBounds.extents.y, temBounds.extents.z);
-            vets[5] = temBounds.center +
-                new Vector3(-temBounds.extents.x, temBounds.extents.y, -temBounds.extents.z);
-            vets[6] = temBounds.center +
-                new Vector3(-temBounds.extents.x, -temBounds.extents.y, -temBounds.extents.z);
-            vets[7] = temBounds.center +
-                new Vector3(-temBounds.extents.x, -temBounds.extents.y, temBounds.extents.z);
-            
+            Vector3[] vets = new Vector3[4];
+            //vets[0] = temBounds.center +
+            //    new Vector3(temBounds.extents.x, temBounds.extents.y, temBounds.extents.z);
+            //vets[1] = temBounds.center +
+            //    new Vector3(temBounds.extents.x, temBounds.extents.y, -temBounds.extents.z);
+            //vets[2] = temBounds.center +
+            //    new Vector3(temBounds.extents.x, -temBounds.extents.y, -temBounds.extents.z);
+            //vets[3] = temBounds.center +
+            //    new Vector3(temBounds.extents.x, -temBounds.extents.y, temBounds.extents.z);
+            //vets[4] = temBounds.center +
+            //    new Vector3(-temBounds.extents.x, temBounds.extents.y, temBounds.extents.z);
+            //vets[5] = temBounds.center +
+            //    new Vector3(-temBounds.extents.x, temBounds.extents.y, -temBounds.extents.z);
+            //vets[6] = temBounds.center +
+            //    new Vector3(-temBounds.extents.x, -temBounds.extents.y, -temBounds.extents.z);
+            //vets[7] = temBounds.center +
+            //    new Vector3(-temBounds.extents.x, -temBounds.extents.y, temBounds.extents.z);
+
             for (int i = 0; i < vets.Length; ++i)
             {
-                vets[i] = portalPlaneRenderer.transform.TransformPoint(vets[i]);
+                vets[i] = portalPlaneRenderer.transform.TransformPoint(vertecis[i]);
                 vets[i] = target.WorldToScreenPoint(vets[i]);
             }
             float minDeep = vets[0].z;
@@ -193,6 +211,19 @@ public class Portal : MonoBehaviour {
         portalCamera.enabled = false;
         portalCamera.transform.parent = portalPlaneRenderer.transform;
         portalPlaneRenderer.material = new Material(portalPlaneShader);
+        _vertecis[0] = new Vector3(-SizeX / 2, SizeY / 2, 0);
+        _vertecis[1] = new Vector3(SizeX / 2, SizeY / 2, 0);
+        _vertecis[2] = new Vector3(SizeX / 2, -SizeY / 2, 0);
+        _vertecis[3] = new Vector3(-SizeX / 2, -SizeY / 2, 0);
+        int[] indices = new int[] { 3,1,0,3,2,1};
+        Mesh mesh = new Mesh();
+        mesh.SetVertices(new List<Vector3>(vertecis));
+        mesh.SetTriangles(indices, 0);
+        GetComponent<MeshFilter>().mesh = mesh;
+        thoughableRange = gameObject.AddComponent<BoxCollider>();
+        thoughableRange.isTrigger = false;
+        thoughableRange.center = new Vector3(0, 0, 0);
+        thoughableRange.size = new Vector3(SizeX, SizeY, doorZLength);
         
     }
     private void OnDestroy()
@@ -204,6 +235,48 @@ public class Portal : MonoBehaviour {
             else if (motherPair.portalB == this)
                 motherPair.portalB = null;
         }
+        for(int i = 0; i < inRangeThoughable.Count; ++i)
+        {
+            inRangeThoughable[i].RemovePortal(this);
+        }
     }
-
+    private void FixedUpdate()
+    {
+        OnMyCollision();
+    }
+    private void OnMyCollision()
+    {
+        var pos = gameObject.transform.TransformPoint(new Vector3(0, 0, ThoughableRangeZLength / 2));
+        Matrix4x4 scale = Matrix4x4.TRS(Vector3.zero, Quaternion.identity, gameObject.transform.lossyScale);
+        Collider[] newInRangeTem = Physics.OverlapBox(pos, scale.MultiplyVector(new Vector3(SizeX, SizeY, ThoughableRangeZLength)) / 2, 
+            gameObject.transform.rotation);
+        List<Thoughable> newInRange = new List<Thoughable>();
+        for(int i = 0; i < newInRangeTem.Length; ++i)
+        {
+            if(newInRangeTem[i].GetComponent<Thoughable>() != null)
+            {
+                newInRange.Add(newInRangeTem[i].GetComponent<Thoughable>());
+            }
+        }
+        List<Thoughable> willOut = inRangeThoughable.Diff(newInRange);
+        List<Thoughable> willIn = newInRange.Diff(inRangeThoughable);
+        //TODO call func
+        for(int i = 0; i < willOut.Count; ++i)
+        {
+            willOut[i].RemovePortal(this);
+        }
+        for (int i = 0; i < willIn.Count; ++i)
+        {
+            willIn[i].AddNearPortal(this);
+        }
+        inRangeThoughable = newInRange;
+    }
+    private void OnDrawGizmos()
+    {
+        Gizmos.color = Color.red;
+        var tem = Gizmos.matrix;
+        Gizmos.matrix = Matrix4x4.TRS(gameObject.transform.position, transform.rotation, transform.lossyScale);
+        Gizmos.DrawWireCube(new Vector3(0, 0, ThoughableRangeZLength / 2), new Vector3(SizeX, SizeY, ThoughableRangeZLength));
+        Gizmos.matrix = tem;
+    }
 }
