@@ -5,7 +5,7 @@ using UnityEngine;
 public class Thoughable : MonoBehaviour {
     private List<Portal> nearPortals = new List<Portal>();
     private Portal thoughingPortal = null;
-	
+    private GameObject mirrorShadow = null;
     public Portal ThonghingPortal
     {
         get
@@ -51,5 +51,17 @@ public class Thoughable : MonoBehaviour {
             Physics.IgnoreCollision(GetComponent<Collider>(), lastPortal.GetComponent<Collider>(), false);
         if (ThonghingPortal != null && ThonghingPortal.GetComponent<Collider>() != null)
             Physics.IgnoreCollision(GetComponent<Collider>(), ThonghingPortal.GetComponent<Collider>(), true);
+        if(lastPortal != thoughingPortal)
+        {
+            if(mirrorShadow != null)
+            {
+                Destroy(mirrorShadow);
+                mirrorShadow = null;
+            }
+            if(thoughingPortal != null)
+            {
+                mirrorShadow = UtilHelper.InstOnlyRenderer(this.gameObject, ThonghingPortal);
+            }
+        }
     }
 }
