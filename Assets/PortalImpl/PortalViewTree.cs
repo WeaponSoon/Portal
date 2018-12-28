@@ -45,7 +45,7 @@ public class PortalViewTree {
         }
         
         ScreenPoatalArea portalRect = p.thisPortal == null ? 
-            new ScreenPoatalArea() { scrrenRect = new Rect(0, 0, Screen.width, Screen.height),minDeep = currentCam.nearClipPlane, maxDeep = currentCam.nearClipPlane } 
+            new ScreenPoatalArea() { scrrenRect = new Rect(0, 0, Screen.width, Screen.height),minDeep = 0, maxDeep = currentCam.nearClipPlane } 
             : p.thisPortal.otherPortal.GetPortalRect(currentCam);
         foreach (var pair in PortalPair.portalPairs)
         {
@@ -133,6 +133,19 @@ public class PortalViewTree {
             }
             rootCamera.Render();
         }
+    }
+    public RenderTexture GetRootSeePortalTexture(Portal portal)
+    {
+        if (rootNode == null)
+            return null;
+        for(int i = 0; i < rootNode.nextPairs.Count; ++i)
+        {
+            if(rootNode.nextPairs[i].thisPortal == portal)
+            {
+                return rootNode.nextPairs[i].rt;
+            }
+        }
+        return null;
     }
 }
 

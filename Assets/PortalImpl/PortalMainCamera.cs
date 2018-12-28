@@ -10,8 +10,12 @@ public class PortalMainCamera : Thoughable {
     private TimeDebugger tdb = new TimeDebugger();
     private TimeDebugger tdr = new TimeDebugger();
     private SphereCollider sphereCollider;
+    private Shader portalPassShader;
+    private Material portalPassMat;
     private void Awake()
     {
+        portalPassShader = Shader.Find("Unlit/PassingPortalPost");
+        portalPassMat = new Material(portalPassShader);
         viewTree.rootCamera = GetComponent<Camera>();
         sphereCollider = GetComponent<SphereCollider>();
         if(sphereCollider == null)
@@ -20,9 +24,12 @@ public class PortalMainCamera : Thoughable {
         }
         sphereCollider.center = Vector3.zero;
         var nearClip = GetComponent<Camera>().nearClipPlane;
+
+        UnityEngine.Debug.Log(nearClip);
+
         var vertAngle = GetComponent<Camera>().fieldOfView / 2;
         var heght = nearClip * Mathf.Tan(vertAngle/180 * Mathf.PI);
-        var width = heght * GetComponent<Camera>().aspect * heght;
+        var width = heght * GetComponent<Camera>().aspect;
         var radius = new Vector3(heght, width, nearClip).magnitude;
         sphereCollider.radius = radius;
         
@@ -40,7 +47,34 @@ public class PortalMainCamera : Thoughable {
     }
     private void OnRenderImage(RenderTexture source, RenderTexture destination)
     {
-        Graphics.Blit(source, destination);
+        if(portalPassMat == null)
+        {
+            Graphics.Blit(source, destination);
+            return;
+        }
+        var nearClip = GetComponent<Camera>().nearClipPlane;
+        var vertAngle = GetComponent<Camera>().fieldOfView / 2;
+        var heght = nearClip * Mathf.Tan(vertAngle / 180 * Mathf.PI);
+        var width = heght * GetComponent<Camera>().aspect;
+        portalPassMat.SetFloat("_NearPlane", nearClip);
+        portalPassMat.SetFloat("_HalfWidth", width);
+        portalPassMat.SetFloat("_HalfHeight", heght);
+
+        portalPassMat.SetVector("_PortalPos", new Vector4(0,0,1,0));
+        portalPassMat.SetVector("_PortalNor", new Vector4(0,0,-1,0));
+        if (viewTree != null && ThonghingPortal != null)
+        {
+            var tex = viewTree.GetRootSeePortalTexture(ThonghingPortal);
+            if(tex != null)
+            {
+                Vector3 pos = GetComponent<Camera>().transform.worldToLocalMatrix.MultiplyPoint(ThonghingPortal.transform.position);
+                Vector3 nor = GetComponent<Camera>().transform.worldToLocalMatrix.MultiplyVector(ThonghingPortal.portalForward);
+                portalPassMat.SetVector("_PortalPos", pos);
+                portalPassMat.SetVector("_PortalNor", nor);
+                portalPassMat.SetTexture("_PortalImg", tex);
+            }
+        }
+        Graphics.Blit(source, destination, portalPassMat);
     }
 }
 
