@@ -4,6 +4,7 @@ using UnityEngine;
 
 public class MoveTest : MonoBehaviour {
 
+    public GameObject testo;
 	// Use this for initialization
 	void Start () {
 		
@@ -11,6 +12,10 @@ public class MoveTest : MonoBehaviour {
 	
 	// Update is called once per frame
 	void Update () {
-        GetComponent<Rigidbody>().MovePosition(transform.position + transform.forward * 0.3f * Time.deltaTime);
-	}
+        var ot = GetComponent<Camera>().WorldToViewportPoint(testo.transform.position);
+        Debug.Log(ot);
+        ot = GetComponent<Camera>().WorldToScreenPoint(testo.transform.position);
+        Debug.Log(ot);
+        //GetComponent<Rigidbody>().MovePosition(transform.position + transform.forward * 0.3f * Time.deltaTime);
+    }
 }

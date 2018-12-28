@@ -70,7 +70,8 @@
 				fixed4 col = tex2D(_MainTex, i.uv);
 				fixed4 colOther = tex2D(_PortalImg, i.uv);
 
-				return col*mask + colOther * (1-mask);
+				return col*mask + //fixed4(1-colOther.x,1-colOther.y,1-colOther.z,1) * (1-mask);
+					colOther*(1-mask);
 			}
 			ENDCG
 		}

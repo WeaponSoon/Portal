@@ -64,16 +64,18 @@ public class PortalMainCamera : Thoughable {
         portalPassMat.SetVector("_PortalNor", new Vector4(0,0,-1,0));
         if (viewTree != null && ThonghingPortal != null)
         {
+            Vector3 pos = GetComponent<Camera>().transform.worldToLocalMatrix.MultiplyPoint(ThonghingPortal.transform.position);
+            Vector3 nor = GetComponent<Camera>().transform.worldToLocalMatrix.MultiplyVector(ThonghingPortal.portalForward);
+            portalPassMat.SetVector("_PortalPos", pos);
+            portalPassMat.SetVector("_PortalNor", nor);
             var tex = viewTree.GetRootSeePortalTexture(ThonghingPortal);
             if(tex != null)
             {
-                Vector3 pos = GetComponent<Camera>().transform.worldToLocalMatrix.MultiplyPoint(ThonghingPortal.transform.position);
-                Vector3 nor = GetComponent<Camera>().transform.worldToLocalMatrix.MultiplyVector(ThonghingPortal.portalForward);
-                portalPassMat.SetVector("_PortalPos", pos);
-                portalPassMat.SetVector("_PortalNor", nor);
                 portalPassMat.SetTexture("_PortalImg", tex);
             }
         }
+        //UnityEngine.Debug.Log("Pos: " + portalPassMat.GetVector("_PortalPos"));
+        //UnityEngine.Debug.Log("Nor: " + portalPassMat.GetVector("_PortalNor"));
         Graphics.Blit(source, destination, portalPassMat);
     }
 }

@@ -7,6 +7,11 @@ public struct ScreenPoatalArea
     public Rect scrrenRect;
     public float minDeep;
     public float maxDeep;
+    public override string ToString()
+    {
+        return "xMin: " + scrrenRect.xMin + " xMax: " + scrrenRect.xMax + " yMin: " + scrrenRect.yMin + " yMax: " + scrrenRect.yMax
+            + " minDeep: " + minDeep + " maxDeep: " + maxDeep;
+    }
 }
 
 public class Portal : MonoBehaviour {
@@ -31,6 +36,8 @@ public class Portal : MonoBehaviour {
             return _vertecis;
         }
     }
+    private int[] indices = new int[] { 3, 1, 0, 3, 2, 1 };
+    private int[] rectIndices = new int[] { 0, 1, 1, 2, 2, 3, 3, 0 };
 
     public float SizeX = 2;
     public float SizeY = 3;
@@ -101,7 +108,7 @@ public class Portal : MonoBehaviour {
         }
     }
 
-    public Vector3 portalForwardInPlaneLocalSpace = new Vector3(0,0,-1);
+    public Vector3 portalForwardInPlaneLocalSpace = new Vector3(0,0,1);
     public Vector3 portalForward
     {
         get
@@ -128,7 +135,7 @@ public class Portal : MonoBehaviour {
         if (mesh != null && mesh.mesh != null)
         {
             Bounds temBounds = mesh.mesh.bounds;
-            Vector3[] vets = new Vector3[4];
+            List<Vector3> vets = new List<Vector3>(9);
             //vets[0] = temBounds.center +
             //    new Vector3(temBounds.extents.x, temBounds.extents.y, temBounds.extents.z);
             //vets[1] = temBounds.center +
@@ -145,11 +152,41 @@ public class Portal : MonoBehaviour {
             //    new Vector3(-temBounds.extents.x, -temBounds.extents.y, -temBounds.extents.z);
             //vets[7] = temBounds.center +
             //    new Vector3(-temBounds.extents.x, -temBounds.extents.y, temBounds.extents.z);
+            
 
-            for (int i = 0; i < vets.Length; ++i)
+            for (int i = 0; i < rectIndices.Length; i+=2)
             {
-                vets[i] = portalPlaneRenderer.transform.TransformPoint(vertecis[i]);
-                vets[i] = target.WorldToScreenPoint(vets[i]);
+                var p1 = portalPlaneRenderer.transform.TransformPoint(vertecis[rectIndices[i]]);
+                var p2 = portalPlaneRenderer.transform.TransformPoint(vertecis[rectIndices[i+1]]);
+
+                p1 = target.transform.worldToLocalMatrix.MultiplyPoint(p1);
+                p2 = target.transform.worldToLocalMatrix.MultiplyPoint(p2);
+
+                if (p1.z - target.nearClipPlane >= 0)
+                {
+                    vets.Add(p1);
+                }
+                if(p2.z - target.nearClipPlane >= 0)
+                {
+                    vets.Add(p2);
+                }
+                if((p1.z - target.nearClipPlane) * (p2.z - target.nearClipPlane) < 0)
+                {
+                    var dir = (p1 - p2).normalized;
+                    float ratio = Mathf.Abs(p2.z - target.nearClipPlane) / Mathf.Abs(p1.z - p2.z);
+                    vets.Add(dir * ratio * (p1-p2).magnitude + p2);
+                    
+                }
+            }
+
+            for (int i = 0; i < vets.Count; ++i)
+            {
+                //vets[i] = portalPlaneRenderer.transform.TransformPoint(vets[i]);
+                vets[i] = target.WorldToViewportPoint(target.transform.transform.TransformPoint(vets[i]));
+            }
+            if(vets.Count <= 0)
+            {
+                return new ScreenPoatalArea { scrrenRect = new Rect(0, 0, 1, 1), minDeep = -100, maxDeep = -100 };
             }
             float minDeep = vets[0].z;
             float maxDeep = vets[0].z;
@@ -158,7 +195,7 @@ public class Portal : MonoBehaviour {
             rect.xMax = vets[0].x;
             rect.yMin = vets[0].y;
             rect.yMax = vets[0].y;
-            for (int i = 0; i < vets.Length; ++i)
+            for (int i = 0; i < vets.Count; ++i)
             {
                 rect.xMin = vets[i].x < rect.xMin ? vets[i].x : rect.xMin;
                 rect.xMax = vets[i].x > rect.xMax ? vets[i].x : rect.xMax;
@@ -167,7 +204,10 @@ public class Portal : MonoBehaviour {
                 minDeep = vets[i].z < minDeep ? vets[i].z : minDeep;
                 maxDeep = vets[i].z > maxDeep ? vets[i].z : maxDeep;
             }
-            
+            if (target.gameObject.name == "Main Camera" && gameObject.name == "Quad2")
+            {
+                Debug.Log("haha: " + minDeep);
+            }
             return new ScreenPoatalArea() { scrrenRect = rect, maxDeep = maxDeep, minDeep = minDeep };
         }
         return new ScreenPoatalArea() { scrrenRect=new Rect(0,0,1,1),minDeep = 0,maxDeep=0};
@@ -182,9 +222,19 @@ public class Portal : MonoBehaviour {
         float xMax = Mathf.Min(mySpa.scrrenRect.xMax, spa.scrrenRect.xMax);
         float yMin = Mathf.Max(mySpa.scrrenRect.yMin, spa.scrrenRect.yMin);
         float yMax = Mathf.Min(mySpa.scrrenRect.yMax, spa.scrrenRect.yMax);
-        
+
+        if (cam.gameObject.name == "Main Camera" && gameObject.name == "Quad2")
+        {
+            Debug.Log("MySpa:  " + mySpa);
+            Debug.Log("plan: " + (xMin < xMax && yMin < yMax));
+            Debug.Log("Rec: xmin:" + xMin + " xmax:" + xMax + " ymin:" + yMin + " ymax:" + yMax);
+            Debug.Log("Dep: " + (mySpa.maxDeep > spa.minDeep));
+            //Debug.Log(Vector3.Dot(portalPlaneRenderer.transform.position - cam.transform.position, portalForward) < 0);
+        }
+
+
         return motherPair != null && motherPair.portalA != null && motherPair.portalB != null && 
-           GeometryUtility.TestPlanesAABB(planes, portalBounds) &&
+           //GeometryUtility.TestPlanesAABB(planes, portalBounds) &&
            xMin < xMax && yMin < yMax && mySpa.maxDeep > spa.minDeep &&
            Vector3.Dot(portalPlaneRenderer.transform.position - cam.transform.position, portalForward) < 0;
     }
@@ -215,7 +265,7 @@ public class Portal : MonoBehaviour {
         _vertecis[1] = new Vector3(SizeX / 2, SizeY / 2, 0);
         _vertecis[2] = new Vector3(SizeX / 2, -SizeY / 2, 0);
         _vertecis[3] = new Vector3(-SizeX / 2, -SizeY / 2, 0);
-        int[] indices = new int[] { 3,1,0,3,2,1};
+        //int[] indices = new int[] { 3,1,0,3,2,1};
         Mesh mesh = new Mesh();
         mesh.SetVertices(new List<Vector3>(vertecis));
         mesh.SetTriangles(indices, 0);
@@ -271,12 +321,12 @@ public class Portal : MonoBehaviour {
         }
         inRangeThoughable = newInRange;
     }
-    private void OnDrawGizmos()
-    {
-        Gizmos.color = Color.red;
-        var tem = Gizmos.matrix;
-        Gizmos.matrix = Matrix4x4.TRS(gameObject.transform.position, transform.rotation, transform.lossyScale);
-        Gizmos.DrawWireCube(new Vector3(0, 0, ThoughableRangeZLength / 2), new Vector3(SizeX, SizeY, ThoughableRangeZLength));
-        Gizmos.matrix = tem;
-    }
+    //private void OnDrawGizmos()
+    //{
+    //    Gizmos.color = Color.red;
+    //    var tem = Gizmos.matrix;
+    //    Gizmos.matrix = Matrix4x4.TRS(gameObject.transform.position, transform.rotation, transform.lossyScale);
+    //    Gizmos.DrawWireCube(new Vector3(0, 0, ThoughableRangeZLength / 2), new Vector3(SizeX, SizeY, ThoughableRangeZLength));
+    //    Gizmos.matrix = tem;
+    //}
 }
